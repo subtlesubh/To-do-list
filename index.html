@@ -67,11 +67,20 @@
             color: var(--muted-color);
             font-weight: 500;
         }
+        
+        .main-content {
+            width: 100%;
+            max-width: 1000px;
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 3rem;
+        }
 
         .container {
             width: 100%;
             max-width: 600px;
-            flex-grow: 1;
             display: flex;
             flex-direction: column;
         }
@@ -271,7 +280,89 @@
             color: var(--text-color);
         }
 
+        /* --- Calendar Styles --- */
+        .calendar-container {
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        #monthYear {
+            font-size: 1.2em;
+            font-weight: 500;
+        }
+
+        .calendar-nav {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--muted-color);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .calendar-nav:hover {
+            background-color: var(--primary-color);
+            color: var(--bg-color);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+        }
+
+        .calendar-day {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 36px;
+            font-size: 0.9em;
+        }
+        
+        .weekday {
+            color: var(--muted-color);
+            font-weight: 500;
+        }
+        
+        .date {
+            cursor: pointer;
+            border-radius: 50%;
+            transition: background-color 0.3s ease;
+        }
+        
+        .date:hover {
+            background-color: var(--border-color);
+        }
+        
+        .prev-month, .next-month {
+            color: #444;
+        }
+        
+        .current-day {
+            background-color: var(--primary-color);
+            color: var(--bg-color);
+            font-weight: 700;
+        }
+
         /* Responsive Design */
+        @media (max-width: 900px) {
+            .main-content {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
         @media (max-width: 768px) {
              body {
                 margin: 1.5rem;
@@ -309,24 +400,46 @@
         </nav>
     </header>
 
-    <div class="container">
-        <div class="header">
-            <h1 id="greeting">Today's Focus</h1>
-            <p id="dateDisplay"></p>
+    <div class="main-content">
+        <div class="container">
+            <div class="header">
+                <h1 id="greeting">Today's Focus</h1>
+                <p id="dateDisplay"></p>
+            </div>
+
+            <form class="input-form" id="taskForm">
+                <input type="text" id="taskInput" class="task-input" placeholder="Add a new task...">
+                <button type="submit" class="add-button">Add</button>
+            </form>
+
+            <ul class="task-list" id="taskList">
+                <!-- Tasks will be dynamically added here -->
+            </ul>
+            
+            <div class="empty-state" id="emptyState">
+                <h2>All clear!</h2>
+                <p>Add a task to get started.</p>
+            </div>
         </div>
 
-        <form class="input-form" id="taskForm">
-            <input type="text" id="taskInput" class="task-input" placeholder="Add a new task...">
-            <button type="submit" class="add-button">Add</button>
-        </form>
-
-        <ul class="task-list" id="taskList">
-            <!-- Tasks will be dynamically added here -->
-        </ul>
-        
-        <div class="empty-state" id="emptyState">
-            <h2>All clear!</h2>
-            <p>Add a task to get started.</p>
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <button id="prevMonth" class="calendar-nav">&lt;</button>
+                <div id="monthYear"></div>
+                <button id="nextMonth" class="calendar-nav">&gt;</button>
+            </div>
+            <div class="calendar-grid weekdays">
+                <div class="calendar-day weekday">S</div>
+                <div class="calendar-day weekday">M</div>
+                <div class="calendar-day weekday">T</div>
+                <div class="calendar-day weekday">W</div>
+                <div class="calendar-day weekday">T</div>
+                <div class="calendar-day weekday">F</div>
+                <div class="calendar-day weekday">S</div>
+            </div>
+            <div class="calendar-grid" id="calendarDates">
+                <!-- Dates will be dynamically added here -->
+            </div>
         </div>
     </div>
 
@@ -350,15 +463,21 @@
         let activeTimerId = null;
         let activeTaskIndex = -1;
 
+        // --- Calendar State ---
+        let currentDate = new Date();
+        const monthYearEl = document.getElementById('monthYear');
+        const calendarDatesEl = document.getElementById('calendarDates');
+        const prevMonthBtn = document.getElementById('prevMonth');
+        const nextMonthBtn = document.getElementById('nextMonth');
+
         // --- Sound and Confetti ---
         let audioCtx;
         function playCompletionSound() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            const notes = [523.25, 659.25, 783.99, 1046.50];
             let startTime = audioCtx.currentTime;
-
             notes.forEach((note, i) => {
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
@@ -374,33 +493,53 @@
         }
 
         function triggerConfetti() {
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 }
-            });
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         }
 
         // --- Date and Greeting ---
         function setDateAndGreeting() {
             const now = new Date();
             const hour = now.getHours();
-            
             let greeting;
-            if (hour < 12) {
-                greeting = "Good morning";
-            } else if (hour < 18) {
-                greeting = "Good afternoon";
-            } else {
-                greeting = "Good evening";
-            }
+            if (hour < 12) greeting = "Good morning";
+            else if (hour < 18) greeting = "Good afternoon";
+            else greeting = "Good evening";
             greetingEl.textContent = greeting;
-
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             dateDisplayEl.textContent = now.toLocaleDateString(undefined, options);
         }
 
-        // --- Core Logic ---
+        // --- Calendar Logic ---
+        function renderCalendar() {
+            const month = currentDate.getMonth();
+            const year = currentDate.getFullYear();
+            
+            monthYearEl.textContent = `${currentDate.toLocaleString('default', { month: 'long' })} ${year}`;
+            
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            calendarDatesEl.innerHTML = '';
+            
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                calendarDatesEl.innerHTML += `<div class="calendar-day"></div>`;
+            }
+            
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day date';
+                dayEl.textContent = i;
+                
+                const today = new Date();
+                if (i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                    dayEl.classList.add('current-day');
+                }
+                
+                calendarDatesEl.appendChild(dayEl);
+            }
+        }
+
+        // --- Core To-Do Logic ---
         let tasks = [];
 
         function saveTasks() {
@@ -411,7 +550,6 @@
             const storedTasks = localStorage.getItem('tasks');
             if (storedTasks) {
                 tasks = JSON.parse(storedTasks);
-                // Ensure no tasks are running on load
                 tasks.forEach(task => task.isRunning = false);
             }
             renderTasks();
@@ -429,9 +567,7 @@
             tasks.forEach((task, index) => {
                 const li = document.createElement('li');
                 li.className = 'task-item';
-                if (task.completed) {
-                    li.classList.add('completed');
-                }
+                if (task.completed) li.classList.add('completed');
                 
                 const playIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.205 4.795a2.25 2.25 0 0 1 3.59 0l6.25 6.25a2.25 2.25 0 0 1 0 3.182l-6.25 6.25a2.25 2.25 0 0 1-3.59-3.182L9.818 12 6.205 8.477a2.25 2.25 0 0 1 0-3.682Z" /></svg>`;
                 const pauseIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4.5 3.75a.75.75 0 0 0-.75.75v15c0 .414.336.75.75.75h3a.75.75 0 0 0 .75-.75V4.5a.75.75 0 0 0-.75-.75h-3Zm9 0a.75.75 0 0 0-.75.75v15c0 .414.336.75.75.75h3a.75.75 0 0 0 .75-.75V4.5a.75.75 0 0 0-.75-.75h-3Z" /></svg>`;
@@ -439,9 +575,7 @@
 
                 li.innerHTML = `
                     <div class="checkbox" onclick="toggleTask(${index})">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.052-.143z" clip-rule="evenodd" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.052-.143z" clip-rule="evenodd" /></svg>
                     </div>
                     <div class="task-details">
                         <span class="task-text">${task.text}</span>
@@ -463,34 +597,25 @@
             e.preventDefault();
             const text = taskInput.value.trim();
             if (text === '') return;
-
             tasks.push({ text: text, completed: false, elapsedTime: 0, isRunning: false });
             taskInput.value = '';
-            
             saveTasks();
             renderTasks();
         }
 
         function toggleTask(index) {
-            if (tasks[index].isRunning) {
-                stopActiveTimer();
-            }
-            
-            // Trigger celebration only when marking as complete
+            if (tasks[index].isRunning) stopActiveTimer();
             if (!tasks[index].completed) {
                 playCompletionSound();
                 triggerConfetti();
             }
-
             tasks[index].completed = !tasks[index].completed;
             saveTasks();
             renderTasks();
         }
 
         function deleteTask(index) {
-            if (tasks[index].isRunning) {
-                stopActiveTimer();
-            }
+            if (tasks[index].isRunning) stopActiveTimer();
             tasks.splice(index, 1);
             saveTasks();
             renderTasks();
@@ -508,26 +633,16 @@
         }
 
         function toggleTimer(index) {
-            // Prevent timer from running on completed tasks
-            if (tasks[index].completed) {
-                return;
-            }
-
+            if (tasks[index].completed) return;
             const wasRunning = tasks[index].isRunning;
-            
             stopActiveTimer();
-
             if (!wasRunning) {
-                // Start this new timer
                 tasks[index].isRunning = true;
                 activeTaskIndex = index;
                 activeTimerId = setInterval(() => {
                     tasks[index].elapsedTime++;
-                    // More efficient to update just this one timer display
                     const li = taskList.children[index];
-                    if (li) {
-                        li.querySelector('.task-timer').textContent = formatTime(tasks[index].elapsedTime);
-                    }
+                    if (li) li.querySelector('.task-timer').textContent = formatTime(tasks[index].elapsedTime);
                     saveTasks();
                 }, 1000);
             }
@@ -535,17 +650,23 @@
         }
         
         function checkEmptyState() {
-            if (tasks.length > 0) {
-                emptyState.style.display = 'none';
-            } else {
-                emptyState.style.display = 'block';
-            }
+            emptyState.style.display = tasks.length > 0 ? 'none' : 'block';
         }
 
         // --- Initial Load ---
         taskForm.addEventListener('submit', addTask);
+        prevMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
+        nextMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
+
         setDateAndGreeting();
         loadTasks();
+        renderCalendar();
     </script>
 </body>
 </html>
