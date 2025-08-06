@@ -10,7 +10,8 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <style>
         :root {
-            --bg-color: #000000;
+            --page-bg-color: #000000;
+            --content-bg-color: #000000;
             --text-color: #ffffff;
             --muted-color: #888888;
             --border-color: #333333;
@@ -18,12 +19,22 @@
             --success-color: #22c55e;
         }
 
+        html.light-mode {
+            --page-bg-color: #f0f0f0;
+            --content-bg-color: #ffffff;
+            --text-color: #000000;
+            --muted-color: #666666;
+            --border-color: #dddddd;
+            --primary-color: #000000;
+        }
+
         html {
-            background-color: var(--bg-color);
+            background-color: var(--page-bg-color);
+            transition: background-color 0.3s ease;
         }
 
         body {
-            background-color: var(--bg-color);
+            background-color: var(--content-bg-color);
             color: var(--text-color);
             font-family: 'Plus Jakarta Sans', sans-serif;
             text-align: center;
@@ -36,6 +47,7 @@
             align-items: center;
             box-sizing: border-box;
             border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
         }
 
         .site-header, .site-footer {
@@ -64,8 +76,30 @@
         }
         
         .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
             color: var(--muted-color);
             font-weight: 500;
+        }
+
+        .theme-switcher {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .theme-switcher:hover {
+            background-color: var(--text-color);
+            color: var(--content-bg-color);
         }
         
         .main-content {
@@ -140,7 +174,7 @@
 
         .add-button:hover {
             background-color: var(--primary-color);
-            color: var(--bg-color);
+            color: var(--content-bg-color);
         }
 
         .task-list {
@@ -313,7 +347,7 @@
         }
         .calendar-nav:hover {
             background-color: var(--primary-color);
-            color: var(--bg-color);
+            color: var(--content-bg-color);
         }
 
         .calendar-grid {
@@ -351,7 +385,7 @@
         
         .current-day {
             background-color: var(--primary-color);
-            color: var(--bg-color);
+            color: var(--content-bg-color);
             font-weight: 700;
         }
 
@@ -397,6 +431,7 @@
         <div class="logo">Subh's To-Do List</div>
         <nav class="header-nav">
             <span>A Minimalist Tool</span>
+            <button class="theme-switcher" id="themeSwitcher" aria-label="Toggle theme"></button>
         </nav>
     </header>
 
@@ -458,6 +493,7 @@
         const emptyState = document.getElementById('emptyState');
         const greetingEl = document.getElementById('greeting');
         const dateDisplayEl = document.getElementById('dateDisplay');
+        const themeSwitcher = document.getElementById('themeSwitcher');
 
         // --- Timer State ---
         let activeTimerId = null;
@@ -470,13 +506,36 @@
         const prevMonthBtn = document.getElementById('prevMonth');
         const nextMonthBtn = document.getElementById('nextMonth');
 
+        // --- Theme Switcher ---
+        const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+        const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+
+        function setLightMode() {
+            document.documentElement.classList.add('light-mode');
+            themeSwitcher.innerHTML = moonIcon;
+            localStorage.setItem('theme', 'light');
+        }
+
+        function setDarkMode() {
+            document.documentElement.classList.remove('light-mode');
+            themeSwitcher.innerHTML = sunIcon;
+            localStorage.setItem('theme', 'dark');
+        }
+
+        themeSwitcher.addEventListener('click', () => {
+            if (document.documentElement.classList.contains('light-mode')) {
+                setDarkMode();
+            } else {
+                setLightMode();
+            }
+        });
+
         // --- Sound and Confetti ---
         let audioCtx;
-        function playCompletionSound() {
+        function playSound(notes, duration = 0.1, volume = 0.2) {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-            const notes = [523.25, 659.25, 783.99, 1046.50];
             let startTime = audioCtx.currentTime;
             notes.forEach((note, i) => {
                 const oscillator = audioCtx.createOscillator();
@@ -484,13 +543,19 @@
                 oscillator.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
                 oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(note, startTime + i * 0.1);
-                gainNode.gain.setValueAtTime(0.3, startTime + i * 0.1);
-                gainNode.gain.exponentialRampToValueAtTime(0.00001, startTime + i * 0.1 + 0.2);
-                oscillator.start(startTime + i * 0.1);
-                oscillator.stop(startTime + i * 0.1 + 0.2);
+                oscillator.frequency.setValueAtTime(note, startTime + i * duration);
+                gainNode.gain.setValueAtTime(volume, startTime + i * duration);
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, startTime + i * duration + duration);
+                oscillator.start(startTime + i * duration);
+                oscillator.stop(startTime + i * duration + duration);
             });
         }
+        
+        function playAddTaskSound() { playSound([261.63, 329.63], 0.08, 0.2); } // C4, E4
+        function playDeleteTaskSound() { playSound([329.63, 261.63], 0.08, 0.2); } // E4, C4
+        function playTimerStartSound() { playSound([440, 587.33], 0.08, 0.2); } // A4, D5
+        function playTimerStopSound() { playSound([220], 0.1, 0.15); } // A3
+        function playCompletionSound() { playSound([523.25, 659.25, 783.99, 1046.50], 0.1, 0.3); } // C5, E5, G5, C6
 
         function triggerConfetti() {
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
@@ -513,28 +578,21 @@
         function renderCalendar() {
             const month = currentDate.getMonth();
             const year = currentDate.getFullYear();
-            
             monthYearEl.textContent = `${currentDate.toLocaleString('default', { month: 'long' })} ${year}`;
-            
             const firstDayOfMonth = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-            
             calendarDatesEl.innerHTML = '';
-            
             for (let i = 0; i < firstDayOfMonth; i++) {
                 calendarDatesEl.innerHTML += `<div class="calendar-day"></div>`;
             }
-            
             for (let i = 1; i <= daysInMonth; i++) {
                 const dayEl = document.createElement('div');
                 dayEl.className = 'calendar-day date';
                 dayEl.textContent = i;
-                
                 const today = new Date();
                 if (i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
                     dayEl.classList.add('current-day');
                 }
-                
                 calendarDatesEl.appendChild(dayEl);
             }
         }
@@ -599,6 +657,7 @@
             if (text === '') return;
             tasks.push({ text: text, completed: false, elapsedTime: 0, isRunning: false });
             taskInput.value = '';
+            playAddTaskSound();
             saveTasks();
             renderTasks();
         }
@@ -617,6 +676,7 @@
         function deleteTask(index) {
             if (tasks[index].isRunning) stopActiveTimer();
             tasks.splice(index, 1);
+            playDeleteTaskSound();
             saveTasks();
             renderTasks();
         }
@@ -637,6 +697,7 @@
             const wasRunning = tasks[index].isRunning;
             stopActiveTimer();
             if (!wasRunning) {
+                playTimerStartSound();
                 tasks[index].isRunning = true;
                 activeTaskIndex = index;
                 activeTimerId = setInterval(() => {
@@ -645,6 +706,8 @@
                     if (li) li.querySelector('.task-timer').textContent = formatTime(tasks[index].elapsedTime);
                     saveTasks();
                 }, 1000);
+            } else {
+                playTimerStopSound();
             }
             renderTasks();
         }
@@ -664,9 +727,17 @@
             renderCalendar();
         });
 
-        setDateAndGreeting();
-        loadTasks();
-        renderCalendar();
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            if (savedTheme === 'light') {
+                setLightMode();
+            } else {
+                setDarkMode();
+            }
+            setDateAndGreeting();
+            loadTasks();
+            renderCalendar();
+        });
     </script>
 </body>
 </html>
