@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal To-Do List</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --muted-color: #888888;
+            --border-color: #333333;
+            --primary-color: #ffffff;
+            --success-color: #22c55e;
+        }
+
+        html {
+            background-color: var(--bg-color);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            text-align: center;
+            padding: 2rem 3rem;
+            margin: 2.5rem;
+            min-height: calc(100vh - 5rem);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            border: 2px solid var(--border-color);
+        }
+
+        .site-header, .site-footer {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        .site-header {
+            font-size: 0.9em;
+            padding-bottom: 1.5rem;
+        }
+        
+        .site-footer {
+            font-size: 0.9em;
+            padding-top: 1.5rem;
+        }
+
+        .logo {
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        .header-nav {
+            color: var(--muted-color);
+            font-weight: 500;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: left;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            color: var(--muted-color);
+            margin: 0.25rem 0 0 0;
+        }
+
+        .input-form {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .task-input {
+            flex-grow: 1;
+            background: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.8rem 1.2rem;
+            font-size: 1.1em;
+            border-radius: 8px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: border-color 0.3s ease;
+        }
+
+        .task-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .add-button {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--muted-color);
+            padding: 0.8rem 1.5rem;
+            font-size: 1em;
+            font-weight: 500;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .add-button:hover {
+            background-color: var(--primary-color);
+            color: var(--bg-color);
+        }
+
+        .task-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            padding: 1.2rem 0;
+            border-bottom: 1px solid var(--border-color);
+            transition: opacity 0.3s ease;
+        }
+        
+        .task-item:first-child {
+            border-top: 1px solid var(--border-color);
+        }
+
+        .task-item.completed .task-text,
+        .task-item.completed .task-timer {
+            text-decoration: line-through;
+            color: var(--muted-color);
+        }
+        
+        .task-item.completed .timer-button {
+            opacity: 0.2;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .task-item.completed .checkbox {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        .task-item.completed .checkbox svg {
+            opacity: 1;
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            margin-right: 1.5rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .checkbox svg {
+            width: 14px;
+            height: 14px;
+            color: var(--bg-color);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .task-details {
+            flex-grow: 1;
+        }
+
+        .task-text {
+            font-size: 1.1em;
+            font-weight: 400;
+            transition: color 0.3s ease;
+        }
+        
+        .task-timer {
+            font-size: 0.9em;
+            color: var(--muted-color);
+            font-weight: 300;
+        }
+        
+        .task-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .timer-button, .delete-button {
+            background: transparent;
+            border: none;
+            color: var(--muted-color);
+            cursor: pointer;
+            opacity: 0.5;
+            transition: all 0.3s ease;
+            padding: 0.5rem;
+        }
+        
+        .timer-button.running {
+            color: var(--primary-color);
+            opacity: 1;
+        }
+        
+        .timer-button svg, .delete-button svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .task-item:hover .timer-button,
+        .task-item:hover .delete-button {
+            opacity: 1;
+        }
+        
+        .timer-button:hover,
+        .delete-button:hover {
+            color: var(--text-color);
+        }
+        
+        .empty-state {
+            padding: 4rem 0;
+            color: var(--muted-color);
+            text-align: center;
+        }
+        
+        .empty-state h2 {
+            margin: 0;
+            font-weight: 500;
+        }
+        
+        .footer-links a {
+            color: var(--muted-color);
+            text-decoration: none;
+            margin-right: 1.5rem;
+            transition: color 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .footer-links a:hover {
+            color: var(--text-color);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+             body {
+                margin: 1.5rem;
+                min-height: calc(100vh - 3rem);
+                padding: 1.5rem;
+            }
+            .header h1 {
+                font-size: 2em;
+            }
+            .site-header, .site-footer {
+                padding: 0;
+                font-size: 0.8em;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                margin: 1rem;
+                min-height: calc(100vh - 2rem);
+                padding: 1rem;
+            }
+            .site-header, .site-footer {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="logo">Subh's To-Do List</div>
+        <nav class="header-nav">
+            <span>A Minimalist Tool</span>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="header">
+            <h1 id="greeting">Today's Focus</h1>
+            <p id="dateDisplay"></p>
+        </div>
+
+        <form class="input-form" id="taskForm">
+            <input type="text" id="taskInput" class="task-input" placeholder="Add a new task...">
+            <button type="submit" class="add-button">Add</button>
+        </form>
+
+        <ul class="task-list" id="taskList">
+            <!-- Tasks will be dynamically added here -->
+        </ul>
+        
+        <div class="empty-state" id="emptyState">
+            <h2>All clear!</h2>
+            <p>Add a task to get started.</p>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-links">
+            <a href="https://github.com/subtlesubh" target="_blank">Github</a>
+            <a href="https://www.instagram.com/hustlewithsubh?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank">Instagram</a>
+        </div>
+        <span>subhgbusiness@gmail.com</span>
+    </footer>
+
+    <script>
+        const taskForm = document.getElementById('taskForm');
+        const taskInput = document.getElementById('taskInput');
+        const taskList = document.getElementById('taskList');
+        const emptyState = document.getElementById('emptyState');
+        const greetingEl = document.getElementById('greeting');
+        const dateDisplayEl = document.getElementById('dateDisplay');
+
+        // --- Timer State ---
+        let activeTimerId = null;
+        let activeTaskIndex = -1;
+
+        // --- Sound and Confetti ---
+        let audioCtx;
+        function playCompletionSound() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            let startTime = audioCtx.currentTime;
+
+            notes.forEach((note, i) => {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(note, startTime + i * 0.1);
+                gainNode.gain.setValueAtTime(0.3, startTime + i * 0.1);
+                gainNode.gain.exponentialRampToValueAtTime(0.00001, startTime + i * 0.1 + 0.2);
+                oscillator.start(startTime + i * 0.1);
+                oscillator.stop(startTime + i * 0.1 + 0.2);
+            });
+        }
+
+        function triggerConfetti() {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+        }
+
+        // --- Date and Greeting ---
+        function setDateAndGreeting() {
+            const now = new Date();
+            const hour = now.getHours();
+            
+            let greeting;
+            if (hour < 12) {
+                greeting = "Good morning";
+            } else if (hour < 18) {
+                greeting = "Good afternoon";
+            } else {
+                greeting = "Good evening";
+            }
+            greetingEl.textContent = greeting;
+
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            dateDisplayEl.textContent = now.toLocaleDateString(undefined, options);
+        }
+
+        // --- Core Logic ---
+        let tasks = [];
+
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        function loadTasks() {
+            const storedTasks = localStorage.getItem('tasks');
+            if (storedTasks) {
+                tasks = JSON.parse(storedTasks);
+                // Ensure no tasks are running on load
+                tasks.forEach(task => task.isRunning = false);
+            }
+            renderTasks();
+        }
+
+        function formatTime(totalSeconds) {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function renderTasks() {
+            taskList.innerHTML = '';
+            tasks.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.className = 'task-item';
+                if (task.completed) {
+                    li.classList.add('completed');
+                }
+                
+                const playIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.205 4.795a2.25 2.25 0 0 1 3.59 0l6.25 6.25a2.25 2.25 0 0 1 0 3.182l-6.25 6.25a2.25 2.25 0 0 1-3.59-3.182L9.818 12 6.205 8.477a2.25 2.25 0 0 1 0-3.682Z" /></svg>`;
+                const pauseIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4.5 3.75a.75.75 0 0 0-.75.75v15c0 .414.336.75.75.75h3a.75.75 0 0 0 .75-.75V4.5a.75.75 0 0 0-.75-.75h-3Zm9 0a.75.75 0 0 0-.75.75v15c0 .414.336.75.75.75h3a.75.75 0 0 0 .75-.75V4.5a.75.75 0 0 0-.75-.75h-3Z" /></svg>`;
+                const timerIcon = task.isRunning ? pauseIcon : playIcon;
+
+                li.innerHTML = `
+                    <div class="checkbox" onclick="toggleTask(${index})">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.052-.143z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="task-details">
+                        <span class="task-text">${task.text}</span>
+                        <div class="task-timer">${formatTime(task.elapsedTime)}</div>
+                    </div>
+                    <div class="task-actions">
+                        <button class="timer-button ${task.isRunning ? 'running' : ''}" onclick="toggleTimer(${index})">${timerIcon}</button>
+                        <button class="delete-button" onclick="deleteTask(${index})">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z" clip-rule="evenodd" /></svg>
+                        </button>
+                    </div>
+                `;
+                taskList.appendChild(li);
+            });
+            checkEmptyState();
+        }
+
+        function addTask(e) {
+            e.preventDefault();
+            const text = taskInput.value.trim();
+            if (text === '') return;
+
+            tasks.push({ text: text, completed: false, elapsedTime: 0, isRunning: false });
+            taskInput.value = '';
+            
+            saveTasks();
+            renderTasks();
+        }
+
+        function toggleTask(index) {
+            if (tasks[index].isRunning) {
+                stopActiveTimer();
+            }
+            
+            // Trigger celebration only when marking as complete
+            if (!tasks[index].completed) {
+                playCompletionSound();
+                triggerConfetti();
+            }
+
+            tasks[index].completed = !tasks[index].completed;
+            saveTasks();
+            renderTasks();
+        }
+
+        function deleteTask(index) {
+            if (tasks[index].isRunning) {
+                stopActiveTimer();
+            }
+            tasks.splice(index, 1);
+            saveTasks();
+            renderTasks();
+        }
+
+        function stopActiveTimer() {
+            if (activeTimerId) {
+                clearInterval(activeTimerId);
+                if (tasks[activeTaskIndex] !== undefined) {
+                    tasks[activeTaskIndex].isRunning = false;
+                }
+                activeTimerId = null;
+                activeTaskIndex = -1;
+            }
+        }
+
+        function toggleTimer(index) {
+            // Prevent timer from running on completed tasks
+            if (tasks[index].completed) {
+                return;
+            }
+
+            const wasRunning = tasks[index].isRunning;
+            
+            stopActiveTimer();
+
+            if (!wasRunning) {
+                // Start this new timer
+                tasks[index].isRunning = true;
+                activeTaskIndex = index;
+                activeTimerId = setInterval(() => {
+                    tasks[index].elapsedTime++;
+                    // More efficient to update just this one timer display
+                    const li = taskList.children[index];
+                    if (li) {
+                        li.querySelector('.task-timer').textContent = formatTime(tasks[index].elapsedTime);
+                    }
+                    saveTasks();
+                }, 1000);
+            }
+            renderTasks();
+        }
+        
+        function checkEmptyState() {
+            if (tasks.length > 0) {
+                emptyState.style.display = 'none';
+            } else {
+                emptyState.style.display = 'block';
+            }
+        }
+
+        // --- Initial Load ---
+        taskForm.addEventListener('submit', addTask);
+        setDateAndGreeting();
+        loadTasks();
+    </script>
+</body>
+</html>
